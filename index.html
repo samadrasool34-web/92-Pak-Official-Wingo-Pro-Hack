@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes, viewport-fit=cover">
+    <title>ZeZo · Wingo & Number</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --header-teal-top: #1FC6B0;
+            --header-teal-mid: #19BFA7;
+            --header-teal-bot: #0FA79A;
+            --card-navy: #224B7A;
+            --main-bg: #0B1E3D;
+            --win-green: #10B981;
+            --loss-red: #EF4444;
+            --gold: #FFD700;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body, html {
+            height: 100%;
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--main-bg);
+            color: #FFFFFF;
+            overflow: hidden;
+            background-image: radial-gradient(circle at 10% 20%, rgba(31, 198, 176, 0.08) 0%, transparent 40%),
+                              radial-gradient(circle at 90% 80%, rgba(34, 75, 122, 0.25) 0%, transparent 40%);
+        }
+        .app-wrapper { display: flex; flex-direction: column; height: 100vh; width: 100%; position: relative; z-index: 10; }
+        .header-section {
+            background: linear-gradient(180deg, var(--header-teal-top) 0%, var(--header-teal-mid) 50%, var(--header-teal-bot) 100%);
+            width: 100%; padding: 15px 15px 10px;
+            border-bottom-left-radius: 25px;
+            border-bottom-right-radius: 25px;
+            text-align: center; position: relative; flex-shrink: 0; overflow: hidden;
+            border-bottom: 2px solid rgba(255,255,255,0.2); box-shadow: 0 8px 15px rgba(0,0,0,0.3);
+        }
+        .header-section::after {
+            content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+            background: linear-gradient(45deg, transparent, rgba(255,255,255,0.2), transparent);
+            transform: rotate(45deg); animation: shine 6s infinite;
+        }
+        @keyframes shine { 0% { left: -100%; } 100% { left: 100%; } }
+        .main-title {
+            font-size: clamp(1rem, 4.5vw, 1.3rem); font-weight: 800; letter-spacing: -0.5px;
+            text-shadow: 2px 4px 6px rgba(0,0,0,0.3); animation: floating 3s ease-in-out infinite;
+        }
+        @keyframes floating { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+        .content-area { flex:1; display:flex; flex-direction:column; align-items:center; padding:12px 10px; overflow-y:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth; position:relative; }
+        #homeScreen, #gameView { width:100%; max-width:min(400px,95%); display:block; margin-bottom:10px; }
+        #gameView { display:none; height:100%; position:relative; }
+        .game-iframe {
+            width:100%;
+            height:85vh;
+            min-height:500px;
+            border:none;
+            border-radius:12px;
+            border:2px solid rgba(31,198,176,0.3);
+            background:#000;
+            box-shadow:0 15px 30px rgba(0,0,0,0.5);
+        }
+        .back-from-game { position:absolute; top:10px; left:10px; background:rgba(0,0,0,0.5); backdrop-filter:blur(5px); border-radius:8px; padding:8px; cursor:pointer; z-index:101; border:1px solid rgba(255,255,255,0.2); }
+        #modalOverlay { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); backdrop-filter:blur(10px); z-index:1000; justify-content:center; align-items:center; padding:16px; }
+        #whatsappModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:3000; justify-content:center; align-items:flex-start; padding:20px; }
+        .whatsapp-modal-content { pointer-events:auto; background:var(--card-navy); border-radius:20px; padding:20px 15px; max-width:min(350px,90%); width:100%; text-align:center; border:2px solid var(--header-teal-top); box-shadow:0 15px 30px rgba(0,0,0,0.6); position:relative; margin:0 auto; backdrop-filter:blur(10px); }
+        .close-whatsapp { position:absolute; top:10px; right:15px; font-size:1.5rem; cursor:pointer; color:#fff; background:rgba(255,255,255,0.2); width:30px; height:30px; border-radius:50%; display:flex; align-items:center; justify-content:center; line-height:1; transition:all 0.2s; }
+        .close-whatsapp:hover { background:rgba(255,255,255,0.4); }
+        .modal-content { width:100%; max-width:min(370px,95%); max-height:90vh; overflow-y:auto; border-radius:25px; }
+        #passwordCard, #apiView { width:100%; display:none; }
+        .game-card, .password-card, .api-container {
+            background:rgba(34,75,122,0.95); backdrop-filter:blur(15px);
+            border-radius:20px;
+            padding:20px 15px; width:100%; text-align:center;
+            border:1.5px solid rgba(31,198,176,0.35); margin:0 auto;
+        }
+        .official-name-tag { color:var(--header-teal-top); font-size:0.8rem; font-weight:600; margin-bottom:5px; display:block; text-transform:uppercase; text-shadow:0 2px 4px rgba(0,0,0,0.3); }
+        .game-subtitle { font-size:clamp(1.1rem, 4.5vw, 1.3rem); font-weight:700; color:#FFFFFF; margin-bottom:12px; background:linear-gradient(to bottom, #fff, var(--header-teal-top)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5)); }
+        .primary-btn {
+            background:linear-gradient(135deg, var(--header-teal-top), var(--header-teal-bot));
+            color:var(--main-bg); font-weight:800; width:100%;
+            padding:14px;
+            border-radius:12px;
+            font-size:clamp(0.9rem,3.5vw,1rem); text-transform:uppercase; letter-spacing:1px;
+            transition:all 0.2s ease; border:none; cursor:pointer; position:relative; top:0;
+            box-shadow:0 5px 0 #097a70, 0 10px 20px rgba(0,0,0,0.3); margin-bottom:10px;
+        }
+        .primary-btn:active { transform:translateY(4px); box-shadow:0 1px 0 #097a70, 0 5px 10px rgba(0,0,0,0.3); }
+        .download-btn {
+            background: linear-gradient(135deg, #FF8C00, #FF4500);
+            color: white;
+            font-weight: 700;
+            width: auto;
+            min-width: 160px;
+            padding: 10px 20px;
+            border-radius: 40px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(255,69,0,0.4);
+            margin: 10px auto 15px;
+            display: inline-block;
+            text-decoration: none;
+            text-align: center;
+        }
+        .download-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 6px 15px rgba(255,69,0,0.6);
+        }
+        .download-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 5px rgba(255,69,0,0.4);
+        }
+        .download-btn.disabled {
+            background: #aaa;
+            box-shadow: none;
+            pointer-events: none;
+            opacity: 0.5;
+        }
+        .pass-input { background:rgba(0,0,0,0.3); border:2px solid var(--header-teal-top); border-radius:12px; padding:15px; width:100%; color:white; text-align:center; font-size:1.2rem; letter-spacing:4px; margin-bottom:20px; outline:none; }
+        .requirement-container { margin-top:25px; padding:15px; background:rgba(0,0,0,0.25); border-radius:15px; border:1px dashed rgba(31,198,176,0.4); text-align:right; direction:rtl; }
+        .req-text { font-size:0.85rem; line-height:1.8; color:#e0e0e0; }
+        .req-highlight { color:var(--header-teal-top); font-weight:800; display:block; text-align:center; margin-bottom:10px; font-size:0.95rem; }
+        .youtube-section {
+            width:100%; max-width:min(400px,100%); margin:20px auto 30px;
+            background: rgba(34,75,122,0.6); backdrop-filter:blur(10px);
+            border-radius:20px; padding:25px 20px;
+            border: none;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        }
+        .thumbnail-item {
+            display:flex; flex-direction:column; 
+            background: rgba(0,0,0,0.3);
+            border-radius:18px; padding:0;
+            border: none;
+            transition:transform 0.15s ease; margin-bottom:20px; cursor:pointer;
+            overflow: hidden;
+        }
+        .thumbnail-item:active { transform:scale(0.99); background:rgba(0,0,0,0.4); }
+        .video-title {
+            font-size:0.95rem; font-weight:600; color:#FFFFFF; 
+            margin:12px 15px 8px;
+            display:flex; align-items:center; gap:6px;
+        }
+        .video-title::before { content:"📺"; font-size:0.95rem; filter:drop-shadow(0 2px 2px black); }
+        .thumbnail-placeholder {
+            width:100%; aspect-ratio:16/9;
+            background: linear-gradient(145deg, #2a4b76, #102b44);
+            display:flex; align-items:center; justify-content:center;
+            background-size:cover; background-position:center;
+            border: none;
+            box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05);
+        }
+        .youtube-play-icon {
+            width:min(45px,11vw); height:min(45px,11vw);
+            background-color:#ff0000; border-radius:50%; 
+            display:flex; align-items:center; justify-content:center;
+            border:none; box-shadow:0 4px 10px rgba(0,0,0,0.3);
+        }
+        .youtube-play-icon::after {
+            content:""; width:0; height:0;
+            border-left:clamp(10px,3.5vw,14px) solid white;
+            border-top:clamp(7px,2.2vw,9px) solid transparent;
+            border-bottom:clamp(7px,2.2vw,9px) solid transparent;
+            margin-left:3px;
+        }
+        .info-box {
+            background: rgba(0,0,0,0.3);
+            border-radius:18px; padding:16px 15px;
+            margin-top:15px;
+            border: none;
+            backdrop-filter:blur(5px);
+        }
+        .info-title { font-size:0.95rem; font-weight:700; color:#FFD700; margin-bottom:6px; display:flex; align-items:center; gap:6px; }
+        .info-title span { font-size:1.2rem; }
+        .info-message { font-size:0.8rem; color:#e0e0e0; line-height:1.5; margin-bottom:5px; }
+        .info-highlight { color:var(--header-teal-top); font-weight:600; }
+
+        .game-tabs { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; }
+        .game-tab {
+            flex: 1; padding: 8px; border-radius: 20px;
+            background: rgba(0,0,0,0.3); border: 2px solid transparent;
+            font-weight: 700; cursor: pointer; transition: 0.2s; color: #fff; font-size:0.9rem;
+        }
+        .game-tab.active { border-color: var(--header-teal-top); background: rgba(31,198,176,0.2); }
+        .timer-circle {
+            width:min(80px,22vw); height:min(80px,22vw); border-radius:50%;
+            border:4px solid rgba(31,198,176,0.2); border-top-color:var(--header-teal-top);
+            display:flex; align-items:center; justify-content:center; margin:12px auto;
+            font-size:clamp(1.1rem,4.5vw,1.3rem); font-weight:800; background:rgba(0,0,0,0.2);
+            animation:spin 2s linear infinite;
+        }
+        @keyframes spin { 100% { border-top-color: #0FA79A; } }
+        .result-display {
+            font-size:clamp(1rem,3.5vw,1.2rem);
+            font-weight:800; letter-spacing:2px;
+            background:linear-gradient(to right, #fff, var(--header-teal-top));
+            -webkit-background-clip:text; -webkit-text-fill-color:transparent; margin:5px 0;
+            padding:5px;
+        }
+        .number-set-container { display: flex; justify-content: center; gap: 5px; margin: 5px 0; }
+        .number-box {
+            width: 30px; height: 30px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 6px; display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; font-weight: 800; border: 1px solid var(--header-teal-top);
+        }
+        .small-note { font-size: 0.7rem; color: #FFD700; margin-top: 5px; font-weight: 500; text-align: center; direction: rtl; }
+        table { width:100%; margin-top:10px; font-size:clamp(0.55rem,2vw,0.65rem); border-collapse: collapse; }
+        th { color:var(--header-teal-top); border-bottom:1px solid rgba(31,198,176,0.2); padding:3px; text-align:center; }
+        td { padding:3px; border-bottom:1px solid rgba(255,255,255,0.05); text-align:center; }
+        .corner-back-btn {
+            position:absolute; top:15px; left:15px; background:rgba(255,255,255,0.1);
+            border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:8px;
+            cursor:pointer; z-index:50; display:flex; align-items:center; justify-content:center;
+            transition:all 0.2s ease;
+        }
+        .corner-back-btn:active { transform:scale(0.9); background:rgba(255,255,255,0.2); }
+        .corner-back-btn svg { width:16px; height:16px; fill:#FFFFFF; }
+        .back-link { margin-top:12px; color:var(--header-teal-top); font-size:0.65rem; font-weight:600; text-transform:uppercase; cursor:pointer; opacity:0.7; padding-bottom:8px; text-align:center; }
+        
+        /* SOCIAL BAR */
+        .social-container {
+            background: rgba(34,75,122,0.95); backdrop-filter: blur(20px);
+            border-top-left-radius: 25px; border-top-right-radius: 25px;
+            padding: 8px 10px;
+            display: flex; justify-content: space-around; align-items: center;
+            border-top: 2px solid rgba(31,198,176,0.4);
+            width: 100%; flex-shrink: 0;
+            position: relative;
+            z-index: 50;
+            transition: all 0.3s ease;
+        }
+        
+        /* When prediction panel is open - hide all except prediction button */
+        .social-container.panel-open .social-item:not(.prediction-main-btn) {
+            opacity: 0;
+            visibility: hidden;
+            width: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .social-container.panel-open {
+            justify-content: center;
+        }
+        
+        .social-container.panel-open .prediction-main-btn {
+            width: auto;
+            transform: scale(1.1);
+        }
+        
+        .social-item {
+            display: flex; flex-direction: column; align-items: center;
+            text-decoration: none; width: 18%;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        .social-item:active { transform: scale(0.95); }
+        
+        /* PREDICTION BUTTON - ALWAYS VISIBLE */
+        .prediction-main-btn {
+            width: 22%;
+        }
+        .prediction-main-btn .icon-box {
+            width: min(50px, 11vw);
+            height: min(50px, 11vw);
+            background: linear-gradient(135deg, var(--gold), #FFA500);
+            border: 2px solid white;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+            animation: pulse-glow 2s infinite;
+        }
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(255, 215, 0, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(255, 215, 0, 0.8); }
+        }
+        .prediction-main-btn .icon-box svg {
+            fill: var(--main-bg);
+            width: min(28px, 6vw);
+            height: min(28px, 6vw);
+        }
+        .prediction-main-btn .social-label {
+            color: var(--gold);
+            font-weight: 800;
+            font-size: clamp(0.45rem, 2vw, 0.6rem);
+        }
+        
+        .icon-box {
+            width: min(35px, 8vw);
+            height: min(35px, 8vw);
+            background: linear-gradient(135deg, rgba(255,255,255,0.15), rgba(255,255,255,0.05));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 4px;
+            border: 1px solid rgba(255,255,255,0.15);
+        }
+        .icon-box svg {
+            fill: var(--header-teal-top);
+            width: min(18px, 4vw);
+            height: min(18px, 4vw);
+        }
+        .social-label {
+            font-size: clamp(0.4rem, 1.8vw, 0.55rem);
+            font-weight: 700;
+            color: rgba(255,255,255,0.9);
+            text-align: center;
+            text-transform: uppercase;
+        }
+        
+        /* FLOATING PREDICTION PANEL */
+        .floating-prediction-panel {
+            position: fixed;
+            bottom: 90px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.9);
+            width: 90%;
+            max-width: 350px;
+            background: var(--card-navy);
+            backdrop-filter: blur(20px);
+            border: 2px solid var(--gold);
+            border-radius: 20px;
+            padding: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: none;
+        }
+        
+        .floating-prediction-panel.show {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) scale(1);
+            pointer-events: all;
+        }
+        
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+        }
+        
+        .panel-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--gold);
+            text-transform: uppercase;
+        }
+        
+        .panel-close {
+            width: 24px;
+            height: 24px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .panel-close:active { background: rgba(255,255,255,0.3); }
+        
+        .panel-period {
+            font-size: 1.1rem;
+            font-weight: 700;
+            text-align: center;
+            color: var(--header-teal-top);
+        }
+        
+        .panel-timer {
+            font-size: 1.8rem;
+            text-align: center;
+            font-weight: 800;
+            margin: 8px 0;
+            padding: 10px;
+            border-radius: 15px;
+            transition: all 0.3s ease;
+            background: rgba(0,0,0,0.3);
+        }
+        
+        /* RED color for last 5 seconds */
+        .panel-timer.warning {
+            color: #FF4444;
+            background: rgba(255, 68, 68, 0.4);
+            animation: pulse-warning 0.3s infinite;
+            font-size: 2rem;
+            text-shadow: 0 0 10px rgba(255,68,68,0.5);
+        }
+        
+        @keyframes pulse-warning {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        
+        .panel-prediction {
+            background: rgba(0,0,0,0.3);
+            border-radius: 12px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .panel-history {
+            max-height: 120px;
+            overflow-y: auto;
+            font-size: 0.7rem;
+            margin-top: 10px;
+        }
+        
+        .glow-dot { position:absolute; background:var(--header-teal-top); border-radius:50%; opacity:0.5; pointer-events:none; z-index:1; animation:pulse-dot 4s infinite ease-in-out; }
+        @keyframes pulse-dot { 0%,100% { opacity:0.1; transform:scale(1); } 50% { opacity:0.8; transform:scale(1.6); } }
+        #errorModal { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:2000; justify-content:center; align-items:center; }
+        .win-badge { color:var(--win-green); font-weight:700; }
+        .loss-badge { color:var(--loss-red); font-weight:700; }
+        @media (max-width:380px) { .content-area { padding:10px 8px; } .game-card, .password-card, .api-container { padding:15px 12px; } .primary-btn { padding:12px; } }
+    </style>
+</head>
+<body>
+    <!-- WhatsApp Join Modal -->
+    <div id="whatsappModal">
+        <div class="whatsapp-modal-content">
+            <div class="close-whatsapp" onclick="dismissWhatsAppModal()">✕</div>
+            <h2 class="text-2xl font-bold text-teal-400 mb-4">📢 JOIN OUR WHATSAPP CHANNEL</h2>
+            <p class="text-sm opacity-90 mb-6">Get daily updates, exclusive tips, and special offers. Join now to stay connected!</p>
+            <a id="whatsappChannelLink" href="#" target="_blank" class="primary-btn mb-4" style="display:inline-block; width:auto; padding:12px 25px; background:#25D366; color:white; box-shadow:none;">📱 JOIN NOW</a>
+            <button onclick="dismissWhatsAppModal()" class="primary-btn" style="background:var(--header-teal-top); box-shadow:none;">⏰ REMIND LATER</button>
+            <p class="text-xs opacity-60 mt-4">You can close this window and join later.</p>
+        </div>
+    </div>
+
+    <div class="app-wrapper" id="appWrapper">
+        <header class="header-section">
+            <h1 class="main-title" id="dynamicMainTitle">ZeZo Wingo Pro Hack</h1>
+        </header>
+
+        <div class="content-area" id="scrollContainer">
+            <!-- HOME SCREEN -->
+            <div id="homeScreen">
+                <div class="game-card">
+                    <span class="official-name-tag" id="dynamicOfficialNameTag">92 Pak Official Hack</span>
+                    <div class="flex justify-center mb-3"><div class="w-12 h-1 bg-teal-400 rounded-full opacity-40"></div></div>
+                    <h2 class="game-subtitle" id="dynamicGameSubtitle">92 Pak Hack</h2>
+
+                    <!-- Download button -->
+                    <a id="downloadBtn" href="#" class="download-btn disabled" target="_blank">Download Now</a>
+                    <p id="downloadMessage" class="text-xs text-red-300/80 mb-3" style="display: none;">Download link not available</p>
+
+                    <button onclick="startGame('wingo')" class="primary-btn mb-2" id="wingoBtn">START WINGO PREDICTION</button>
+                    <button onclick="startGame('number')" class="primary-btn" style="background:linear-gradient(135deg, #FBBF24, #F59E0B); box-shadow:0 5px 0 #B45309;" id="numberBtn">START NUMBER PREDICTION</button>
+                    <p class="mt-3 text-[10px] text-teal-400/60 uppercase tracking-widest font-bold" id="footerSmallText">Wingo v3.2 · Number v2.0</p>
+                </div>
+
+                <!-- YouTube + Giveaway -->
+                <div class="youtube-section" id="youtubeSection">
+                    <div class="youtube-heading">🎬 LATEST VIDEO</div>
+                    <div class="thumbnail-item" id="youtubeThumbnail">
+                        <span class="video-title" id="videoTitle">Loading...</span>
+                        <div class="thumbnail-placeholder" id="thumbnailContainer"><div class="youtube-play-icon"></div></div>
+                    </div>
+                    <div class="info-box" id="giveawayBox">
+                        <div class="info-title"><span>🎁</span> <span id="giveawayTitle">DAILY GIVEAWAY</span></div>
+                        <div class="info-message" id="giveawayMessage">Loading...</div>
+                        <div class="info-message" style="margin-top:10px; font-size:0.75rem; color:#aad8d1;" id="giveawayFooter">⏰ روزانہ رات 8 بجے اپ ڈیٹ ہوتا ہے۔</div>
+                    </div>
+                    <p class="text-center text-[0.6rem] text-teal-300/70 mt-4 tracking-wider">👇 مزید معلومات کے لیے سکرول کریں</p>
+                </div>
+            </div>
+
+            <!-- GAME VIEW -->
+            <div id="gameView">
+                <div class="back-from-game" onclick="backToHome()"><svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg></div>
+                <iframe id="gameIframe" class="game-iframe" src="https://www.example.com" sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>
+            </div>
+        </div>
+
+        <!-- Modal overlay (for password) -->
+        <div id="modalOverlay"><div class="modal-content">
+            <!-- Password Card -->
+            <div id="passwordCard" class="password-card">
+                <span class="official-name-tag">Security Required</span>
+                <h2 class="game-subtitle" style="font-size:1.2rem; margin-bottom:20px;">Enter Password</h2>
+                <input type="password" id="passwordInput" class="pass-input" placeholder="Type Here...">
+                <button onclick="checkPassword()" class="primary-btn">Unlock Now</button>
+                <div class="requirement-container">
+                    <span class="req-highlight">🔐 *ہیک کا پاس ورڈ حاصل کرنے کا طریقہ* 🔐</span>
+                    <div class="req-text" id="requirementText">
+                        <!-- Dynamic content from admin panel -->
+                    </div>
+                </div>
+                <div class="back-link" onclick="closeModal()">Close</div>
+            </div>
+        </div></div>
+
+    <!-- TICK TICK SOUND - LOUD AND CLEAR -->
+    <audio id="tickSound" loop style="display: none;" preload="auto">
+        <source src="data:audio/wav;base64,UklGRlwAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YVQAAACAgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf39/f39/f3+AgICAf38=" type="audio/wav">
+        <source src="https://www.soundjay.com/misc/sounds/tick-tock-1.mp3" type="audio/mpeg">
+    </audio>
+
+        <!-- FLOATING PREDICTION PANEL -->
+        <div class="floating-prediction-panel" id="predictionPanel">
+            <div class="panel-header">
+                <div class="panel-title" id="panelTitle">WINGO PREDICTION</div>
+                <div class="panel-close" onclick="hidePredictionPanel()">✕</div>
+            </div>
+            
+            <!-- Game Tabs inside panel -->
+            <div style="display: flex; gap: 5px; margin-bottom: 8px;">
+                <button onclick="switchGamePanel('30S')" class="game-tab active" style="flex:1; padding:5px; font-size:0.7rem;" id="panelTab30S">30S</button>
+                <button onclick="switchGamePanel('1M')" class="game-tab" style="flex:1; padding:5px; font-size:0.7rem;" id="panelTab1M">1M</button>
+            </div>
+            
+            <div class="panel-period" id="panelPeriod">--------</div>
+            <div class="panel-timer" id="panelTimer">⏱️ 30s</div>
+            
+            <div class="panel-prediction" id="panelPredictionArea">
+                <!-- Wingo prediction -->
+                <div id="panelWingo" style="display: none; text-align: center;">
+                    <div class="result-display" id="panelWingoPrediction">BIG</div>
+                </div>
+                
+                <!-- Number prediction -->
+                <div id="panelNumber" style="display: none;">
+                    <div class="number-set-container" id="panelNumberSet"></div>
+                </div>
+            </div>
+            
+            <!-- Mini history -->
+            <div class="panel-history">
+                <table style="font-size:0.6rem;">
+                    <thead id="panelTableHeader"></thead>
+                    <tbody id="panelHistory"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- BOTTOM SOCIAL BAR -->
+        <div class="social-container" id="socialBar">
+            <a href="#" class="social-item" id="contactLink" target="_blank" onclick="handleInteraction(event)"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.417-.003 6.557-5.338 11.892-11.893 11.892-1.997-.001-3.951-.5-5.688-1.448l-6.305 1.652zm6.599-3.835c1.53.909 3.039 1.389 4.625 1.39 5.25.001 9.522-4.272 9.523-9.523.001-2.546-.994-4.937-2.798-6.742-1.804-1.803-4.195-2.798-6.741-2.799-5.245 0-9.519 4.274-9.521 9.525-.001 1.696.449 3.353 1.303 4.811l-1.01 3.693 3.819-.982z"/></svg></div><span class="social-label">Contact</span></a>
+            
+            <a href="#" class="social-item" id="waChannelLink" target="_blank" onclick="handleInteraction(event)"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14.5v-9l6 4.5-6 4.5z"/></svg></div><span class="social-label">WA</span></a>
+            
+            <!-- MAIN PREDICTION BUTTON - FIXED LOGO -->
+            <div class="social-item prediction-main-btn" id="predictionMainBtn" onclick="togglePredictionPanel()">
+                <div class="icon-box">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                    </svg>
+                </div>
+                <span class="social-label" id="predictionMainLabel">PREDICT</span>
+            </div>
+            
+            <a href="#" class="social-item" id="ytChannelLink" target="_blank" onclick="handleInteraction(event)"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg></div><span class="social-label">YT</span></a>
+            
+            <a href="#" class="social-item" id="fbPageLink" target="_blank" onclick="handleInteraction(event)"><div class="icon-box"><svg viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg></div><span class="social-label">FB</span></a>
+        </div>
+    </div>
+
+    <!-- Error Modal -->
+    <div id="errorModal"><div style="background:var(--card-navy); padding:30px; border-radius:20px; border:1px solid #ff4444; text-align:center; max-width:80%;"><h3 style="color:#ff4444; font-weight:800; margin-bottom:15px;">WRONG PASSWORD</h3><p style="font-size:0.9rem; opacity:0.8; margin-bottom:20px;">Access denied. Please check your password and try again.</p><button onclick="document.getElementById('errorModal').style.display='none'" class="primary-btn" style="padding:10px 30px; background:#ff4444; box-shadow:none;">OK</button></div></div>
+    <audio id="clickSound" src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3"></audio>
+
+    <script>
+        const FIREBASE_URL = "https://zezo-wingo-pro-penal-hack-default-rtdb.firebaseio.com";
+
+        // DOM elements
+        const homeScreen = document.getElementById('homeScreen');
+        const gameView = document.getElementById('gameView');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const passwordCard = document.getElementById('passwordCard');
+        const passwordInput = document.getElementById('passwordInput');
+        const errorModal = document.getElementById('errorModal');
+        const videoTitle = document.getElementById('videoTitle');
+        const thumbnailContainer = document.getElementById('thumbnailContainer');
+        const youtubeThumbnail = document.getElementById('youtubeThumbnail');
+        const giveawayTitle = document.getElementById('giveawayTitle');
+        const giveawayMessage = document.getElementById('giveawayMessage');
+        const giveawayFooter = document.getElementById('giveawayFooter');
+        const gameIframe = document.getElementById('gameIframe');
+        const whatsappModal = document.getElementById('whatsappModal');
+        const whatsappChannelLink = document.getElementById('whatsappChannelLink');
+        const contactLink = document.getElementById('contactLink');
+        const waChannelLink = document.getElementById('waChannelLink');
+        const ytChannelLink = document.getElementById('ytChannelLink');
+        const fbPageLink = document.getElementById('fbPageLink');
+        const footerSmallText = document.getElementById('footerSmallText');
+        const officialNameTag = document.querySelector('.official-name-tag');
+        const mainTitle = document.querySelector('.main-title');
+        const gameSubtitle = document.querySelector('.game-subtitle');
+        const wingoBtn = document.getElementById('wingoBtn');
+        const numberBtn = document.getElementById('numberBtn');
+        const tickSound = document.getElementById('tickSound');
+        const requirementTextDiv = document.getElementById('requirementText');
+
+        // Panel elements
+        const predictionPanel = document.getElementById('predictionPanel');
+        const socialBar = document.getElementById('socialBar');
+        const panelTitle = document.getElementById('panelTitle');
+        const panelPeriod = document.getElementById('panelPeriod');
+        const panelTimer = document.getElementById('panelTimer');
+        const panelWingo = document.getElementById('panelWingo');
+        const panelNumber = document.getElementById('panelNumber');
+        const panelWingoPrediction = document.getElementById('panelWingoPrediction');
+        const panelNumberSet = document.getElementById('panelNumberSet');
+        const panelTableHeader = document.getElementById('panelTableHeader');
+        const panelHistory = document.getElementById('panelHistory');
+        const panelTab30S = document.getElementById('panelTab30S');
+        const panelTab1M = document.getElementById('panelTab1M');
+        const predictionMainLabel = document.getElementById('predictionMainLabel');
+
+        let APP_PASSWORD = "7474";
+        let GAME_LINK = "https://www.example.com";
+        let WHATSAPP_CHANNEL_URL = "https://whatsapp.com/channel/example";
+        let TIMER_OFFSET = 0; // EXACT MATCH - NO OFFSET
+        let isUnlocked = false;
+        let timerInterval;
+        let liveInterval;
+        let currentGame = "30S";
+        let currentGameType = 'wingo';
+        let numberSetCache = {};
+        let wingoPredictionCache = {};
+        let lastUpdatedPeriod = null;
+        let panelVisible = false;
+        let lastTickSecond = -1;
+
+        // ---------- Prediction Generator ----------
+        const SMALL = [0,1,2,3,4];
+        const BIG   = [5,6,7,8,9];
+        
+        function shuffle(arr) { 
+            for (let i = arr.length-1; i>0; i--) { 
+                const j = Math.floor(Math.random()*(i+1)); 
+                [arr[i],arr[j]] = [arr[j],arr[i]]; 
+            } 
+            return arr; 
+        }
+        
+        function generateNumberPrediction(prevDigits, patternIndex) {
+            const smallCount = patternIndex % 2 === 0 ? 2 : 3;
+            const bigCount = 5 - smallCount;
+            
+            for (let attempt = 0; attempt < 500; attempt++) {
+                const smallPool = shuffle([...SMALL]);
+                const selectedSmall = smallPool.slice(0, smallCount);
+                const bigPool = shuffle([...BIG]);
+                const selectedBig = bigPool.slice(0, bigCount);
+                const candidate = shuffle([...selectedSmall, ...selectedBig]);
+                
+                if (prevDigits) {
+                    const overlap = candidate.filter(d => prevDigits.includes(d)).length;
+                    if (overlap > 2) continue;
+                }
+                return candidate.join('');
+            }
+            return "01234";
+        }
+        
+        function getRandomWingoPrediction() {
+            return Math.random() < 0.5 ? "BIG" : "SMALL";
+        }
+
+        function getPeriodNumber(p) { 
+            return parseInt(String(p).replace(/\D/g,'')) || 0; 
+        }
+
+        // API Endpoints
+        const API_ENDPOINTS = {
+            "30S": { 
+                time: "https://draw.ar-lottery01.com/WinGo/WinGo_30S.json", 
+                history: "https://draw.ar-lottery01.com/WinGo/WinGo_30S/GetHistoryIssuePage.json" 
+            },
+            "1M": { 
+                time: "https://draw.ar-lottery01.com/WinGo/WinGo_1M.json", 
+                history: "https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json" 
+            }
+        };
+
+        // Visitor tracking
+        const VISITOR_KEY = 'zezo_visitor_id';
+        let visitorId = localStorage.getItem(VISITOR_KEY);
+        const isNew = !visitorId;
+        if (isNew) {
+            visitorId = 'v_' + Date.now() + '_' + Math.random().toString(36).substr(2,9);
+            localStorage.setItem(VISITOR_KEY, visitorId);
+        }
+        
+        function updatePresence() { 
+            fetch(`${FIREBASE_URL}/presence/${visitorId}.json`, { 
+                method:'PUT', 
+                body:JSON.stringify({ lastSeen:Date.now() }) 
+            }).catch(()=>{}); 
+        }
+        updatePresence(); 
+        setInterval(updatePresence, 30000);
+
+        // ----- TIMER FUNCTIONS -----
+        function playTickSound() {
+            try {
+                tickSound.volume = 1.0;
+                tickSound.currentTime = 0;
+                tickSound.play().catch(() => {
+                    const audio = new Audio('https://www.soundjay.com/misc/sounds/tick-tock-1.mp3');
+                    audio.volume = 1.0;
+                    audio.play().catch(() => {});
+                });
+            } catch(e) {}
+        }
+
+        function stopTickSound() {
+            try {
+                tickSound.pause();
+                tickSound.currentTime = 0;
+            } catch(e) {}
+        }
+
+        function updatePanelPrediction(period) {
+            if (!period || period === "--") return;
+            
+            if (currentGameType === 'wingo') {
+                if (!wingoPredictionCache[period]) {
+                    wingoPredictionCache[period] = getRandomWingoPrediction();
+                }
+                panelWingoPrediction.innerText = wingoPredictionCache[period];
+                panelWingo.style.display = 'block';
+                panelNumber.style.display = 'none';
+            } else {
+                if (!numberSetCache[period]) {
+                    const allPeriods = Object.keys(numberSetCache).sort();
+                    const prevPeriod = allPeriods.length > 1 ? allPeriods[allPeriods.length - 2] : null;
+                    const prevDigits = prevPeriod ? numberSetCache[prevPeriod] : null;
+                    const patternIndex = allPeriods.length;
+                    
+                    const predStr = generateNumberPrediction(prevDigits, patternIndex);
+                    numberSetCache[period] = predStr.split('').map(Number);
+                }
+                
+                const currentSet = numberSetCache[period] || [];
+                panelNumberSet.innerHTML = '';
+                currentSet.forEach(n => {
+                    const box = document.createElement('div'); 
+                    box.className = 'number-box'; 
+                    box.innerText = n;
+                    panelNumberSet.appendChild(box);
+                });
+                
+                panelWingo.style.display = 'none';
+                panelNumber.style.display = 'block';
+            }
+            
+            lastUpdatedPeriod = period;
+        }
+
+        async function fetchPanelData() {
+            if (!isUnlocked || !panelVisible) return;
+            
+            try {
+                const [timeRes, historyRes] = await Promise.all([ 
+                    fetch(API_ENDPOINTS[currentGame].time), 
+                    fetch(API_ENDPOINTS[currentGame].history) 
+                ]);
+                
+                const timeData = await timeRes.json();
+                const historyData = await historyRes.json();
+                
+                const currentPeriod = timeData?.current?.issueNumber || "--";
+                const endTime = timeData?.current?.endTime;
+                
+                const now = Date.now();
+                let secondsLeft = 0;
+                if (endTime) {
+                    secondsLeft = Math.floor((endTime - now) / 1000);
+                    const maxSeconds = currentGame === "30S" ? 30 : 60;
+                    if (secondsLeft > maxSeconds) secondsLeft = maxSeconds;
+                    if (secondsLeft < 0) secondsLeft = 0;
+                }
+                
+                secondsLeft = Math.max(0, Math.min(secondsLeft, currentGame === "30S" ? 30 : 60));
+                
+                panelPeriod.innerText = currentPeriod;
+                panelTimer.innerText = `⏱️ ${secondsLeft}s`;
+                
+                if (secondsLeft <= 5 && secondsLeft > 0) {
+                    panelTimer.classList.add('warning');
+                    if (secondsLeft !== lastTickSecond) {
+                        lastTickSecond = secondsLeft;
+                        playTickSound();
+                    }
+                } else {
+                    panelTimer.classList.remove('warning');
+                    if (secondsLeft === 0) {
+                        stopTickSound();
+                        lastTickSecond = -1;
+                    }
+                }
+
+                const historyList = historyData?.data?.list || [];
+                let allPeriods = historyList.map(i=>i.issueNumber);
+                if (currentPeriod !== "--") allPeriods.push(currentPeriod);
+                allPeriods = [...new Set(allPeriods)];
+                
+                let periodObjects = allPeriods.map(p=>({ period:p, num:getPeriodNumber(p) }))
+                                              .sort((a,b)=>a.num-b.num);
+                
+                let prevDigits = null, patternIndex = 0;
+                for (let po of periodObjects) {
+                    if (!numberSetCache[po.period]) {
+                        const predStr = generateNumberPrediction(prevDigits, patternIndex);
+                        numberSetCache[po.period] = predStr.split('').map(Number);
+                    }
+                    prevDigits = numberSetCache[po.period];
+                    patternIndex++;
+                }
+
+                if (currentPeriod !== lastUpdatedPeriod && currentPeriod !== "--") {
+                    updatePanelPrediction(currentPeriod);
+                }
+
+                if (currentGameType === 'wingo') {
+                    panelTableHeader.innerHTML = '<tr><th>Period</th><th>Result</th></tr>';
+                } else {
+                    panelTableHeader.innerHTML = '<tr><th>Period</th><th>Pred</th><th>Res</th></tr>';
+                }
+
+                let lastItems = historyList.slice(0, 5);
+                panelHistory.innerHTML = "";
+                lastItems.forEach(item => {
+                    const issue = item.issueNumber;
+                    const actualNum = parseInt(item.number);
+                    
+                    if (currentGameType === 'wingo') {
+                        const actual = (actualNum >=0 && actualNum <=4) ? "SMALL" : "BIG";
+                        panelHistory.innerHTML += `<tr><td>${issue}</td><td>${actual}</td></tr>`;
+                    } else {
+                        const set = numberSetCache[issue] || [];
+                        const predictionDisplay = set.join('');
+                        panelHistory.innerHTML += `<tr><td>${issue}</td><td>${predictionDisplay}</td><td>${actualNum}</td></tr>`;
+                    }
+                });
+
+            } catch(e) { 
+                console.error(e); 
+            }
+        }
+
+        function switchGamePanel(g) { 
+            if (g === currentGame) return;
+            
+            currentGame = g; 
+            panelTab30S.classList.toggle('active', g === '30S');
+            panelTab1M.classList.toggle('active', g === '1M');
+            
+            lastUpdatedPeriod = null;
+            if (panelVisible) fetchPanelData(); 
+        }
+
+        async function loadConfig() {
+            try {
+                const resp = await fetch(`${FIREBASE_URL}/config.json`);
+                const config = await resp.json() || {};
+
+                // Texts
+                if (config.mainTitle) mainTitle.innerText = config.mainTitle;
+                if (config.officialNameTag) officialNameTag.innerText = config.officialNameTag;
+                if (config.gameSubtitle) gameSubtitle.innerText = config.gameSubtitle;
+                if (config.wingoButtonText) wingoBtn.innerText = config.wingoButtonText;
+                if (config.numberButtonText) numberBtn.innerText = config.numberButtonText;
+                if (config.footerSmallText) footerSmallText.innerText = config.footerSmallText;
+
+                // Links
+                const downloadBtn = document.getElementById('downloadBtn');
+                const downloadMessage = document.getElementById('downloadMessage');
+                if (downloadBtn) {
+                    if (config.downloadAppLink) {
+                        downloadBtn.href = config.downloadAppLink;
+                        downloadBtn.classList.remove('disabled');
+                        if (downloadMessage) downloadMessage.style.display = 'none';
+                    } else {
+                        downloadBtn.classList.add('disabled');
+                        if (downloadMessage) downloadMessage.style.display = 'block';
+                    }
+                }
+
+                if (config.whatsappNumber) contactLink.href = `https://wa.me/${config.whatsappNumber}`;
+                if (config.whatsappContactLink) waChannelLink.href = config.whatsappContactLink;
+                if (config.whatsappChannelLink) { 
+                    WHATSAPP_CHANNEL_URL = config.whatsappChannelLink; 
+                    whatsappChannelLink.href = config.whatsappChannelLink;
+                }
+                if (config.registerGameLink) { 
+                    GAME_LINK = config.registerGameLink; 
+                }
+                if (config.youtubeChannelLink) ytChannelLink.href = config.youtubeChannelLink;
+                if (config.facebookPageLink) fbPageLink.href = config.facebookPageLink;
+
+                // Giveaway & YouTube
+                if (config.dailyGiveawayTitle) giveawayTitle.innerText = config.dailyGiveawayTitle;
+                if (config.dailyGiveawayMessage) giveawayMessage.innerHTML = config.dailyGiveawayMessage.replace(/\n/g,'<br>');
+                if (config.dailyGiveawayFooter) giveawayFooter.innerText = config.dailyGiveawayFooter;
+                if (config.youtubeVideoTitle) videoTitle.innerText = config.youtubeVideoTitle;
+                if (config.youtubeVideoUrl) youtubeThumbnail.onclick = () => window.open(config.youtubeVideoUrl, '_blank');
+                if (config.youtubeThumbnailUrl) thumbnailContainer.style.backgroundImage = `url('${config.youtubeThumbnailUrl}')`;
+
+                // Security & misc
+                if (config.appPassword) APP_PASSWORD = config.appPassword;
+                if (typeof config.timerOffset === 'number') TIMER_OFFSET = config.timerOffset;
+                
+                // Password requirement text
+                if (config.passwordRequirementText) {
+                    requirementTextDiv.innerHTML = config.passwordRequirementText.replace(/\n/g,'<br>');
+                } else {
+                    // Default text
+                    requirementTextDiv.innerHTML = `👉 ہماری لنک سے نیا اکاؤنٹ بنائیں<br>👉 اکاؤنٹ میں ڈیپازٹ کریں<br>👉 ڈیپازٹ کا اسکرین شاٹ ہمارے ساتھ شیئر کریں<br><span style="color:var(--header-teal-top); font-weight:600;">✅ *اس کے بعد آپ کو ہیک کا پاس ورڈ دے دیا جائے گا*</span><br><span style="color:#FFD700; font-weight:600; display:block; margin-top:8px;">⚠️ *اہم شرط* :</span>✔️ *صرف NEW ACCOUNT قابلِ قبول ہے*<br>✔️ کم از کم ڈیپازٹ 300 یا اس سے زیادہ ہونا لازمی ہے<br><div style="text-align:center; margin-top:10px; font-size:0.75rem; opacity:0.9;">🚀 *Limited Offer | Serious Users Only* 🚀</div>`;
+                }
+            } catch(e) { console.warn("Config error", e); }
+        }
+
+        function shouldShowWhatsAppModal() { 
+            const j = localStorage.getItem('whatsapp_join_date');
+            const d = localStorage.getItem('whatsapp_dismissed_date');
+            const t = new Date().toISOString().split('T')[0]; 
+            return !(j === t || d === t); 
+        }
+        
+        function dismissWhatsAppModal() { 
+            localStorage.setItem('whatsapp_dismissed_date', new Date().toISOString().split('T')[0]); 
+            whatsappModal.style.display = 'none'; 
+        }
+
+        function startGame(type) { 
+            playSound(); 
+            currentGameType = type; 
+            homeScreen.style.display = 'none'; 
+            gameView.style.display = 'block'; 
+            gameIframe.src = GAME_LINK; 
+            
+            panelTitle.innerText = type === 'wingo' ? 'WINGO PREDICTION' : 'NUMBER PREDICTION';
+            
+            scrollContainer.scrollTop = 0; 
+        }
+        
+        function backToHome() { 
+            playSound(); 
+            gameView.style.display = 'none'; 
+            homeScreen.style.display = 'block'; 
+            hidePredictionPanel();
+        }
+        
+        function playSound() { 
+            document.getElementById('clickSound').play().catch(()=>{}); 
+            if(navigator.vibrate) navigator.vibrate(40); 
+        }
+
+        function togglePredictionPanel() {
+            playSound();
+            
+            if (!isUnlocked) {
+                passwordCard.style.display = 'block';
+                modalOverlay.style.display = 'flex';
+                passwordInput.value = '';
+                return;
+            }
+            
+            if (panelVisible) {
+                hidePredictionPanel();
+            } else {
+                showPredictionPanel();
+            }
+        }
+        
+        function showPredictionPanel() {
+            panelVisible = true;
+            predictionPanel.classList.add('show');
+            socialBar.classList.add('panel-open');
+            
+            lastUpdatedPeriod = null;
+            fetchPanelData();
+            
+            if (liveInterval) clearInterval(liveInterval);
+            liveInterval = setInterval(fetchPanelData, 1000);
+        }
+        
+        function hidePredictionPanel() {
+            panelVisible = false;
+            predictionPanel.classList.remove('show');
+            socialBar.classList.remove('panel-open');
+            stopTickSound();
+            
+            if (liveInterval) {
+                clearInterval(liveInterval);
+                liveInterval = null;
+            }
+        }
+        
+        function closeModal() { 
+            modalOverlay.style.display = 'none'; 
+        }
+        
+        function checkPassword() { 
+            if (passwordInput.value === APP_PASSWORD) { 
+                playSound(); 
+                isUnlocked = true; 
+                closeModal();
+                showPredictionPanel();
+            } else { 
+                playSound(); 
+                errorModal.style.display = 'flex'; 
+                passwordInput.value = ''; 
+            } 
+        }
+
+        function handleInteraction(event) {
+            event.preventDefault();
+            playSound();
+            
+            const href = event.currentTarget.href;
+            if (href && href !== '#') {
+                window.open(href, '_blank');
+            }
+        }
+
+        window.onload = async () => {
+            await loadConfig();
+            whatsappModal.style.display = shouldShowWhatsAppModal() ? 'flex' : 'none';
+            homeScreen.style.display = 'block'; 
+            gameView.style.display = 'none'; 
+            modalOverlay.style.display = 'none';
+            
+            panelTitle.innerText = 'WINGO PREDICTION';
+        };
+    </script>
+</body>
+</html>
